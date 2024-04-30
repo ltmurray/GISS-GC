@@ -5,9 +5,10 @@ fc="your_fortran_compiler_name" # e.g. ifort
 #nclib="-L${nchome}/lib -lnetcdf"
 #ncinc="-I${nchome}/include"
 
-fccmd=$1
-nclib=$2
-ncinc=""
+fccmd=$(nf-config --fc)
+fccmd+=" -cpp -fallow-argument-mismatch"
+nclib=$(nf-config --flibs)
+ncinc=$(nf-config --fflags)
 
 echo "executing compscr with arguments:"
 echo

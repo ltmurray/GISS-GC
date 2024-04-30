@@ -428,12 +428,12 @@ endif
 %.f: %.m4f
 	-rm -f $@
 	$(M4) -I`dirname $<` $< > $@
-	chmod -w $@
+	chmod 644 $@
 
 %.F90: %.m4F90
 	-rm -f $@
 	$(M4) -I`dirname $<` $< > $@
-	chmod -w $@
+	chmod 644 $@
 
 
 

@@ -24,8 +24,8 @@ endif
 
 FMAKEDEP = $(SCRIPTS_DIR)/sfmakedepend
 CPPFLAGS += -DCOMPILER_G95
-FFLAGS = -g -cpp -fconvert=big-endian -O2 -fno-range-check
-F90FLAGS = -g -cpp -fconvert=big-endian -O2 -fno-range-check -ffree-line-length-none
+FFLAGS = -g -cpp -fconvert=big-endian -O2 -fno-range-check -fallow-argument-mismatch
+F90FLAGS = -g -cpp -fconvert=big-endian -O2 -fno-range-check -ffree-line-length-none -fallow-argument-mismatch
 LFLAGS =
 
 F90_VERSION = $(shell $(F90) --version | head -1)
