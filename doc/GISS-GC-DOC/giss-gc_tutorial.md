@@ -35,7 +35,7 @@ The most important dependency is the [netcdf-fortran](https://github.com/Unidata
 
 Example environmental yaml files for miniforge are available in `$GISS_HOME/doc/GISS-GC-DOC/envs`, and may be installed using
 ```console
-conda env create -n giss -f giss_macOS_silicon.yml
+conda env create -n giss -f giss_ubuntu_22.04.4_lts.yml
 ```
 
 To load the environment containing all the variables necessary to compile and run ModelE2.1
