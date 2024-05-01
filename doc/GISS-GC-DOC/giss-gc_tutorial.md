@@ -32,21 +32,21 @@ git clone git@github.com:fetch4/GISS-GC.git $GISS_HOME
 
 ### 1b. Install Software Dependencies
 
-The most important dependency is the [netcdf-fortran](https://github.com/Unidata/netcdf-fortran) library compiled with MPI parallelization. If using a package manager like [miniforge](https://github.com/conda-forge/miniforge) (_recommended_), this will come with all other necessary packages for running ModelE2.1, although you will also want cmake, git and a text editor.
+The most important dependency is the [netcdf-fortran](https://github.com/Unidata/netcdf-fortran) library compiled with MPI parallelization. If using a package manager like [miniforge](https://github.com/conda-forge/miniforge) (_recommended for most users_), this will come with all other necessary packages for running ModelE2.1, although you will also want cmake, git and a text editor.
 
 Example environmental yaml files for miniforge are available in `$GISS_HOME/doc/GISS-GC-DOC/envs`, and may be installed using
 ```console
 conda env create -n giss -f giss_ubuntu_22.04.4_lts.yml
 ```
 
-To load the environment containing all the variables necessary to compile and run ModelE2.1
+To load the environment containing all the dependencies necessary to compile and run ModelE2.1
 ```console
 conda activate giss
 ```
 
 ### 1c. Install GISS Post-Processing Tools<a name="scaleacc"></a>
 
-The tools located in `$GISS_HOME/model/mk_diags` are necessary for post-processing the model output into a useful format. I recommend copying that directory to a common location to which you can point your `$PATH` variable to the binaries.
+The tools located in `$GISS_HOME/model/mk_diags` are necessary for post-processing the model output into a useful format, particularly the `scaleacc` program. I recommend copying that directory to a common location to which you can point your `$PATH` variable to the binaries.
 
 ```console
 mkdir $HOME/tools
@@ -218,7 +218,7 @@ make rundeck RUN=E6F40_TEST RUNSRC=E6F40 OVERWRITE=YES
 ```
 This creates a new simulation with the name assigned to `RUN` (it should be a unique name for every simulation you perform), using as a template the `RUNSRC` template. Here "E6F40" means a CMIP6-class atmosphere-only simulation with fine (“F”; 2º x 2.5º) horizontal resolution and 40 vertical layers from the surface to the mesosphere, and the default configuration is for a preindustrial simulation ca. 1850s in which all composition is prescribed (i.e., no interactive chemistry).
 
-Let’s modify the rundeck we generated (`$GISS_HOME/decks/E6F40_TEST.R`) to run for one month. The row with YEARI indicates when the model starts; the row in red shows when the model will end.  Note: these are dummy years in this setup as master_yr is set to 1850 earlier in the file, which makes all boundary conditions and climate forcers equal to 1850 climatology.
+Let’s modify the rundeck we generated (`$GISS_HOME/decks/E6F40_TEST.R`) to run for one month. The row with YEARI indicates when the model starts; the row with YEARE shows when the model will end.  Note: these are placeholder years in this setup as master_yr is set to 1850 earlier in the file, which makes all boundary conditions and climate forcers equal to 1850 climatology.
 
 Setting KDIAG equal to 13*0 reduces the amount of text archived in the log file.
 
@@ -231,7 +231,7 @@ Setting KDIAG equal to 13*0 reduces the amount of text archived in the log file.
 ```
 ### 2b. Download Input Files
 
-No we need to download the input files that are specified in the rundeck file `E6F40_TEST.R`. In practice, it is easiest to try the next step, which will fail but provide a list of the missing files you need.
+Now we need to download the input files that are specified in the rundeck file `E6F40_TEST.R`. In practice, it is easiest to try the next step, which will fail, but output a list of the missing files you need.
 
 The input files are available for download from NASA at [https://portal.nccs.nasa.gov/GISS_modelE/](https://portal.nccs.nasa.gov/GISS_modelE/).
 
@@ -460,9 +460,10 @@ ModelE2.1 aggregates many diagnostics every month in an “accumulation” file,
 ```console
 scaleacc MONYYYY.acc${RUNID}.nc aij	  # Generate 2-D atmospheric data output for Month MON/YYYY
 scaleacc MONYYYY.acc${RUNID}.nc aijl  # Generate 3-D atmospheric data output for Month MON/YYYY
+scaleacc MONYYYY.acc${RUNID}.nc all   # Generate all model output for Month MON/YYYY
 ```
 
-You may also combine files using the `sumfiles` tool before converting using `scaleacc`. For example,
+You may also combine files using the `sumfiles` tool before using `scaleacc`. For example,
 ```console
 sumfiles *${YYYY}.acc${RUNID}.nc
 ```
