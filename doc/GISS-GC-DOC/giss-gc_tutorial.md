@@ -1,6 +1,6 @@
 # Running the GISS ModelE2.1 GCM to drive the GEOS-Chem CTM 
-Lee T. Murray
-Last Updated: April 30, 2024
+Lee T. Murray (lee.murray@rochester.edu)
+Last Updated: May 1, 2024
 
 ## Overview
 [ModelE2.1](https://www.giss.nasa.gov/tools/modelE/) is a global general circulation model (GCM) developed primarily at the NASA Goddard Institute for Space Studies in New York, NY. Version "E2.1" of the model is the version that was frozen for the majority of NASA’s contributions to the Coupled Model Intercomparison Project Phase 6 (CMIP6) experiment done in support of the Sixth IPCC Assessment Report [(AR6)](https://www.ipcc.ch/assessment-report/ar6/). 
@@ -15,9 +15,10 @@ If you are new to Linux/UNIX systems, first read the following guides
 
 ## Table of Contents
 1. [First-Time Setup](#first)
-2. [Setup a ModelE2.1 run](#config)
-3. [Perform a ModelE2.1 simulation](#run)
+2. [Setup a ModelE2.1 Run](#config)
+3. [Perform a ModelE2.1 Simulation](#run)
 4. [Process ModelE2.1 output](#postprocess)
+5. [Archive Diagnostics Necessary for Driving GEOS-Chem](#subdd)
 
 ## 1. First-Time Setup<a name="first"></a>
 
@@ -351,14 +352,13 @@ Now create the links to all in the necessary input files for the simulation
 /bin/bash ${RUNID}ln
 ```
 
-Now you can execute the first hour to make sure everything runs okay. This means run in parallel with 6 processors (`mpirun -np 6`) the program `${RUNID}.exe`, and feed it the input file (`-i`) named `I`, re-start from the very beginning of the simulation (`-cold-restart`), and save the output into log file `cold_restart.log`. 
+Now you can execute the first hour to make sure everything runs okay. This means run in parallel with 6 processors (`mpirun -np 6`) the program `${RUNID}.exe`, and feed it the input file named `I` (`-i I`), restart from the very beginning of the simulation (`-cold-restart`), save the output into log file (`&> cold_restart.log`), and run in the background (`&`). 
 ```console
 mpirun -np 6 ./${RUNID}.exe -i I -cold-restart &> cold_restart.log &
 ```
 Here we are asking for 6 processors, but you can ask for any number that your system has up to 88 to make the simulation faster.
 
-If all goes well, you should see the model run for the first hour nad then gracefully stop.
-You can follow along as the model outputs `cold_restart.log` using the `tail` command:
+If all goes well, you should see the model run for the first hour and then gracefully stop. You can follow along as the model outputs `cold_restart.log` using the `tail` command:
 ```console
 tail -f cold_restart.log
 ```
@@ -473,3 +473,271 @@ sumfiles JAN*.acc${RUNID}.nc
 generates a JANYYYY-YYYY file that contains the multi-year climatology. After aggregation, these acc files may be converted using scaleacc as above.
 
 Once in NetCDF format, you can use whatever software and plotting tool that you prefer for analysis and interpretation (e.g., [R](https://cran.r-project.org/web/packages/ncdf4/index.html), [python](http://unidata.github.io/netcdf4-python/), [Matlab](https://www.mathworks.com/help/matlab/network-common-data-form.html), [NCL](https://www.ncl.ucar.edu/Applications/netcdf4.shtml)).
+
+## Archive Diagnostics Necessary for Driving GEOS-Chem<a name="subdd"></a>
+
+The default diagnostics for ModelE2.1 are archived as monthly averages. GEOS-Chem needs input meteorology archived at higher temporal resolution (1-hr for 2-D fields, and 3-hr for 3-D fields). Therefore, we need to set up a simulation that includes sub-daily ("subdd") diagnostics. To do so, we are going to use the "GCAP2" rundeck template to create our run directory and compile the model.
+
+```console
+cd $GISS_HOME/decks
+make rundeck RUN=GCAP2_TEST RUNSRC=GCAP2 OVERWRITE=YES
+make -j setup RUN=GCAP2_TEST F90=mpif90
+```
+
+The relevant changes are the addition of the following preprocessor statements,
+```diff
++#define NEW_IO_SUBDD
++#define CACHED_SUBDD
++#define GCAP
++#CALCULATE LIGHTNING
+```
+the inclusion of the following modules,
+```diff
++lightning
++SUBDD
+```
+an increased frequency to calling the radiation code,
+```diff
+-NRAD=5
++NRAD=1
+```
+and the following diagnostics
+```diff
+-SUBDD=''
++SUBDD='PS:6i QV:6i T:6i'
++SUBDD1='ALBEDO:2 CLDTOT:2 EFLUX:2 FRSEAICE:2 FRSNO:2 GWETTOP:2'
++SUBDD2='GWETROOT:2 HFLUX:2 LAI:2 LWI:2 PARDF:2 PARDR:2 PBLH:2'
++SUBDD3='PRECANV:2 PRECCON:2 PRECLSC:2 PRECSNO:2 PRECTOT:2 SLP:2'
++SUBDD4='SNODP:2 SNOMAS:2 SWGDN:2 T2M:2 TO3:2 TROPPT:2 TS:2'
++SUBDD5='U10M:2 USTAR:2 V10M:2 Z0M:2 FLASH_DENS:2 CTH:2 QV2M:2'
++SUBDD6='DTRAIN:6 OMEGA:6 RH:6 U:6 V:6'
++SUBDD7='CLOUD:6 OPTDEPTH:6 QI:6 QL:6 TAUCLI:6 TAUCLW:6'
++SUBDD8='DQRCU:6 DQRLSAN:6 REEVAPCN:6 REEVAPLS:6'
++SUBDD9='CMFMC:6 PFICU:6 PFILSAN:6 PFLCU:6 PFLLSAN:6'
+
++NSUBDD=1         ! saving sub-daily diags every NSUBDD-th physics time step (1/2 hr)
++DAYS_PER_FILE=1
+```
+
+Then, we will execute the first hour
+```console
+cd $ModelE_Support/huge_space/$RUNID
+/bin/bash ${RUNID}ln
+mpirun -np 6 ./${RUNID}.exe -i I -cold-restart &> cold_restart.log &
+```
+And finally, the full simulation (whether interactively or within a slurm script)
+```console
+mpirun -np 6 ./${RUNID}.exe -i I &> ${RUNID}.log &
+```
+
+In addition to the monthly accumulation (acc) files, the model will now archive daily sub-daily diagnostic (subdd) files named, `${YYYY}${MM}${DD}.subdd${RUNID}.nc`. As with the accumulation files, these must be passed through scaleacc to be converted to a useful form.
+```console
+scaleacc ${YYYY}${MM}${DD}.subdd${RUNID}.nc all
+```
+which will generate the following files
+```console
+${YYYY}${MM}${DD}.aijh2${RUNID}.nc
+${YYYY}${MM}${DD}.aijlh6${RUNID}.nc
+${YYYY}${MM}${DD}.aijleh6${RUNID}.nc
+${YYYY}${MM}${DD}.aijh6i${RUNID}.nc
+${YYYY}${MM}${DD}.aijlh6i${RUNID}.nc
+```
+The nomenclature for naming the files, which each contain diagnostics with common spatial and temporal characteristics are: `a` = atmosphere, `ij` = 2-D fields, `ijl` = 3-D fields at level midpoint, `ijle` = 3-D fields at level edges, `h2` = hourly averages (i.e., 2 time steps), `h6` = 3-hr averages, and `h6i` = 3-hr instantaneous values.
+
+These files are very close to being able to drive GEOS-Chem directly in a GCAP2 simulation. However, the ModelE2.1 daily output files include times from 01:00 to 24:00, and GEOS-Chem requires the input files go from 00:00 to 23:00.
+
+Here is a script that makes use of the extremely useful [cdo](https://code.mpimet.mpg.de/projects/cdo) and [nco](https://nco.sourceforge.net) tools (installed with the conda environment) that can do that conversion.
+```bash
+#!/bin/bash
+
+conda activate giss
+
+runid=${RUNID}
+bd=`pwd`
+
+# Remove any existing tmp files
+rm tmp* *.tmp
+
+# Process topographic file
+./${runid}ln
+if [ ! -d $bd/2x2.5 ]; then mkdir -p $bd/2x2.5; fi
+cp TOPO 2x2.5/TOPO
+ncap2 -O -s 'focean@units="1"; flake@units="1"; fgrnd@units="1"; fgice@units="1"; zatmo@units="m";' TOPO 2x2.5/TOPO
+
+today=1949-12-01
+while [ "$today" != 1950-01-01 ]; do
+
+    # Get today's string
+    year=${today:0:4}; month=${today:5:2}; day=${today:8:2}; ymd=${year}${month}${day}
+
+    # Get yesterdays's string
+    yest=$(date -I -d "$today - 1 day")
+    yyear=${yest:0:4}; ymonth=${yest:5:2}; yday=${yest:8:2}
+
+    # Get tomorrow's string
+    tomm=$(date -I -d "$today + 1 day")
+
+    # GISS uses a 365 day calendar
+    if [[ $((10#$ymonth)) -eq 02 ]] && [[ $((10#$yday)) -eq 29 ]]; then
+	yday=28
+    fi
+    if [[ $((10#$month)) -eq 02 ]] && [[ $((10#$day)) -eq 29 ]]; then 
+	today=$tomm 
+	continue
+    fi
+
+    if [ ! -f ${year}${month}${day}.subdd${runid}.nc ]; then 
+	today=$tomm 
+	continue 
+    fi
+
+    ########################
+    # Special Case on Day 1
+    ########################
+    if [ "$today" == 1949-12-01 ]; then
+	echo $year $month $day
+	if [ ! -d $bd/2x2.5/$year/$/month ]; then mkdir -p $bd/2x2.5/$year/$month; fi
+	scaleacc ${year}${month}${day}.subdd${runid}.nc all
+	for ftype in aijh6i aijlh6i aijh2 aijleh6 aijlh6; do
+	    
+	    # Fix latitude so N and S pole are correctly 89N and 89S
+	    ncap2 -O -s 'lat=array(-89e0,2e0,$lat);' ${year}${month}${day}.${ftype}${runid}.nc ${year}${month}${day}.${ftype}${runid}.nc
+
+	    # Copy and compress the native model resolution 
+	    echo 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4
+
+	    # Special treatment for instantaneous files (GEOS includes 0; GISS includes 24 in a given day)
+	    if [[ $ftype = "aijh6i" ]] || [[ $ftype = "aijlh6i" ]] ; then
+		ncks -O -d time,0   ${year}${month}${day}.${ftype}${runid}.nc tmp1.nc
+		ncap2 -O -s 'time=time-3;' tmp1.nc tmp1.nc
+		ncks -O -d time,0,6 ${year}${month}${day}.${ftype}${runid}.nc tmp2.nc
+		ncrcat -O tmp1.nc tmp2.nc ${year}${month}${day}.${ftype}${runid}.nc
+		rm tmp*
+	    fi
+	    nccopy -k4 -d9 ${year}${month}${day}.${ftype}${runid}.nc 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4 && rm -f ${year}${month}${day}.${ftype}${runid}.nc
+
+	    # Fix the metadata
+	    f=2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4
+	    f2=${year}${month}${day}.${ftype}${runid}.nc4
+
+	    # Add some optional CF coordinate variables
+	    ncatted -O -h -a scale_factor,,c,f,1 $f
+	    ncatted -O -h -a add_offset,,c,f,0 $f
+	    crDate=`date`
+	    case "$ftype" in
+		aijh2) title="GISS ModelE2.1 1-hour time-averaged parameters (aijh2), processed for GEOS-Chem input"; dt="010000" ;;
+		aijh6i) title="GISS ModelE2.1 3-hour instantaneous parameters (aijh6i), processed for GEOS-Chem input"; dt="030000" ;;
+		aijleh6) title="GISS ModelE2.1 3-hour time-averaged parameters on model edges (aijleh6), processed for GEOS-Chem input"; dt="030000" ;;
+		aijlh6) title="GISS ModelE2.1 3-hour time-averaged parameters (aijlh6), processed for GEOS-Chem input"; dt="030000" ;;
+		aijlh6i) title="GISS ModelE2.1 3-hour instantaneous parameters (aijlh6i), processed for GEOS-Chem input"; dt="030000" ;;
+	    esac
+	    echo $f $title
+
+	    # Delete and replace global metadata
+	    ncatted -O -h -a ,global,d,, $f
+	    ncatted -O -h -a Title,global,c,c,"$title" $f
+	    ncatted -O -h -a Contact,global,c,c,"Lee T. Murray (lee.murray@rochester.edu)" $f
+	    ncatted -O -h -a References,global,c,c,"www.geos-chem.org; wiki.geos-chem.org; http://ees.rochester.edu/atmos/data" $f
+	    ncatted -O -h -a Filename,global,c,c,"${f2}" $f
+	    ncatted -O -h -a History,global,c,c,"File generated on:  ${crDate}" $f
+	    ncatted -O -h -a ProductionDateTime,global,c,c,"File generated on: ${crDate}" $f
+	    ncatted -O -h -a ModificationDateTime,global,c,c,"File generated on: ${crDate}" $f
+	    ncatted -O -h -a Format,global,c,c,"NetCDF-4" $f
+	    ncatted -O -h -a SpatialCoverage,global,c,c,"global" $f
+	    ncatted -O -h -a Conventions,global,c,c,"COARDS" $f
+	    ncatted -O -h -a Version,global,c,c,"GISS ModelE2.1" $f
+	    ncatted -O -h -a VersionID,global,c,c,"$runid" $f
+	    ncatted -O -h -a Nlayers,global,c,c,"40" $f
+	    ncatted -O -h -a Start_Date,global,c,c,"$today" $f
+	    ncatted -O -h -a Start_Time,global,c,c,"00:00:00.0" $f
+	    ncatted -O -h -a End_Date,global,c,c,"$today" $f
+	    ncatted -O -h -a End_Time,global,c,c,"23:59:59.99999" $f
+	    ncatted -O -h -a Delta_Time,global,c,c,"$dt" $f
+	    ncatted -O -h -a Delta_Lon,global,c,c,"2.5" $f
+	    ncatted -O -h -a Delta_Lat,global,c,c,"2" $f
+	done # ftype
+    fi
+
+    ########################
+    # Normal Cases
+    ########################
+
+    if [ ! -f ${yyear}${ymonth}${yday}.subdd${runid}.nc ]; then today=$tomm; continue; fi
+    if [ ! -d $bd/2x2.5/$year/$/month ]; then mkdir -p $bd/2x2.5/$year/$month; fi
+
+    echo $year $month $day
+
+    scaleacc ${year}${month}${day}.subdd${runid}.nc all
+    scaleacc ${yyear}${ymonth}${yday}.subdd${runid}.nc aijh6i,aijlh6i
+
+    for ftype in aijh6i aijlh6i aijh2 aijleh6 aijlh6; do
+
+	# Fix latitude so N and S pole are correctly 89N and 89S
+	ncap2 -O -s 'lat=array(-89e0,2e0,$lat);' ${year}${month}${day}.${ftype}${runid}.nc ${year}${month}${day}.${ftype}${runid}.nc
+
+	# Copy and compress the native model resolution 
+	echo 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4
+	nccopy -k4 -d9 ${year}${month}${day}.${ftype}${runid}.nc 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4 && rm -f ${year}${month}${day}.${ftype}${runid}.nc
+
+	# Special treatment for instantaneous files (GEOS includes 0; GISS includes 24 in a given day)
+	if [[ $ftype = "aijh6i" ]] || [[ $ftype = "aijlh6i" ]] ; then
+	    ncap2 -O -s 'lat=array(-89e0,2e0,$lat);' ${yyear}${ymonth}${yday}.${ftype}${runid}.nc ${yyear}${ymonth}${yday}.${ftype}${runid}.nc
+	    nccopy -k4 -d9 ${yyear}${ymonth}${yday}.${ftype}${runid}.nc tmp${ymd}.nc4 && rm -f ${yyear}${ymonth}${yday}.${ftype}${runid}.nc
+	    ncrcat -O tmp${ymd}.nc4 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4 tmp2${ymd}.nc4 && rm -f tmp${ymd}.nc4
+	    cdo -O seldate,${year}-${month}-${day} tmp2${ymd}.nc4 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4 && rm -f tmp2${ymd}.nc4
+	fi
+
+	# Fix the metadata
+	f=2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4
+	f2=${year}${month}${day}.${ftype}${runid}.nc4
+
+	# Add some optional CF coordinate variables                                                                                                                                                                                                                              
+	ncatted -O -h -a scale_factor,,c,f,1 $f
+	ncatted -O -h -a add_offset,,c,f,0 $f
+
+	crDate=`date`
+
+	case "$ftype" in
+	    aijh2) title="GISS ModelE2.1 1-hour time-averaged parameters (aijh2), processed for GEOS-Chem input"; dt="010000" ;;
+	    aijh6i) title="GISS ModelE2.1 3-hour instantaneous parameters (aijh6i), processed for GEOS-Chem input"; dt="010000" ;;
+	    aijleh6) title="GISS ModelE2.1 3-hour time-averaged parameters on model edges (aijleh6), processed for GEOS-Chem input"; dt="010000" ;;
+	    aijlh6) title="GISS ModelE2.1 3-hour time-averaged parameters (aijlh6), processed for GEOS-Chem input"; dt="010000" ;;
+	    aijlh6i) title="GISS ModelE2.1 3-hour instantaneous parameters (aijlh6i), processed for GEOS-Chem input"; dt="010000" ;;
+	esac
+	echo $f $title
+
+	# Delete and replace global metadata                                                                                                                                                                                                                                    
+	ncatted -O -h -a ,global,d,, $f
+	ncatted -O -h -a Title,global,c,c,"$title" $f
+	ncatted -O -h -a Contact,global,c,c,"Your Name (your.email@domain)" $f
+	ncatted -O -h -a References,global,c,c,"www.geos-chem.org; wiki.geos-chem.org; http://atmos.earth.rochester.edu/giss-gc" $f
+	ncatted -O -h -a Filename,global,c,c,"${f2}" $f
+	ncatted -O -h -a History,global,c,c,"File generated on:  ${crDate}" $f
+	ncatted -O -h -a ProductionDateTime,global,c,c,"File generated on: ${crDate}" $f
+	ncatted -O -h -a ModificationDateTime,global,c,c,"File generated on: ${crDate}" $f
+	ncatted -O -h -a Format,global,c,c,"NetCDF-4" $f
+	ncatted -O -h -a SpatialCoverage,global,c,c,"global" $f
+	ncatted -O -h -a Conventions,global,c,c,"COARDS" $f
+	ncatted -O -h -a Version,global,c,c,"GISS ModelE2.1" $f
+	ncatted -O -h -a VersionID,global,c,c,"$runid" $f
+	ncatted -O -h -a Nlayers,global,c,c,"40" $f
+	ncatted -O -h -a Start_Date,global,c,c,"$today" $f
+	ncatted -O -h -a Start_Time,global,c,c,"00:00:00.0" $f
+	ncatted -O -h -a End_Date,global,c,c,"$today" $f
+	ncatted -O -h -a End_Time,global,c,c,"23:59:59.99999" $f
+	ncatted -O -h -a Delta_Time,global,c,c,"010000" $f
+	ncatted -O -h -a Delta_Lon,global,c,c,"2.5" $f
+	ncatted -O -h -a Delta_Lat,global,c,c,"2" $f
+
+    done # ftype
+
+    # Delete subdd file if successfully processed
+    if [ -f 2x2.5/$year/$month/${year}${month}${day}.${ftype}${runid}.nc4 ]; then rm -f ${yyear}${ymonth}${yday}.subdd${runid}.nc; fi
+
+    today=$tomm
+done # Date
+
+exit 0;
+```
+
+The contents of `${ModelE_Support}/huge_space/${RUNID}/2x2.5` may now be used to drive a GEOS-Chem simulation.

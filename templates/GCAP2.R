@@ -112,7 +112,7 @@ Ndisk=960        ! write fort.1.nc or fort.2.nc every NDISK source time step
 
 &INPUTZ
  YEARI=1949,MONTHI=12,DATEI=1,HOURI=0, ! pick IYEAR1=YEARI (default) or < YEARI
- YEARE=1949,MONTHE=12,DATEE=2,HOURE=0,     KDIAG=13*9,
+ YEARE=1950,MONTHE=1,DATEE=1,HOURE=0,     KDIAG=13*0,
  ISTART=2,IRANDI=0, YEARE=1949,MONTHE=12,DATEE=1,HOURE=1,
 /
 !! suggested settings for E6qsF40:
