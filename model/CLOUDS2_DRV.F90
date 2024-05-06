@@ -213,6 +213,8 @@ subroutine CONDSE
   use CLOUDS, only : mc_up_mf, mc_dd_mf, mc_up_ent, mc_dd_ent, mc_up_det, mc_dd_det
   use CLOUDS, only : mc_dqcond, mc_dqevap, ls_dqcond, ls_dqevap
   use CLOUDS, only : mc_pflx_l, mc_pflx_i, ls_pflx_l, ls_pflx_i
+  use CLOUDS_COM, only : pficu, pflcu, pfilsan, pfllsan
+  use CLOUDS_COM, only : dtrain, dqrcu, dqrlsan, reevapcn, reevapls, cmfmc
 #endif
   use PBLCOM, only : dclev,egcm,w2gcm,pblht,pblptop
   use ATM_COM, only : pk,pek,pmid,pedn,gz,PMIDOLD,pdsig,MWs, &
@@ -302,26 +304,6 @@ subroutine CONDSE
             :: mc_pl_max_p1,mc_pl_max_p2, mc_pl_min_p1,mc_pl_min_p2
     integer LMIN
 #endif
-
-#ifdef GCAP
-    real*8, &
-         dimension(GRID%I_STRT_HALO:GRID%I_STOP_HALO, &
-                   GRID%J_STRT_HALO:GRID%J_STOP_HALO,LM) :: &
-                   dtrain,         & ! Updraft detrainment flux in layer [kg/m2/s]
-                   dqrcu,          & ! Convective rainwater source in layer [kg/kg/s]
-                   dqrlsan,        & ! Stratiform rainwater source in layer [kg/kg/s] 
-                   reevapcn,       & ! Evap./subl. of convective precip in layer [kg/kg/s]
-                   reevapls          ! Evap./subl. of stratiform precip in layer [kg/kg/s]
-    real*8, &
-         dimension(GRID%I_STRT_HALO:GRID%I_STOP_HALO, &
-                   GRID%J_STRT_HALO:GRID%J_STOP_HALO,LM+1) :: &
-                   cmfmc,          & ! Upward cloud mass flux [kg/m2/s]                   
-                   pficu,          & ! Downward flux of convective ice precipitation [kg/m2/s]
-                   pflcu,          & ! Downward flux of convective liq precipitation [kg/m2/s]
-                   pfilsan,        & ! Downward flux of large-scale ice precipitation [kg/m2/s]
-                   pfllsan           ! Downward flux of large-scale liq precipitation [kg/m2/s]                   
-    integer LMIN
-#endif    
 
 #ifdef CACHED_SUBDD
 #ifdef TRACERS_WATER

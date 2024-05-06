@@ -36,6 +36,10 @@
      &     ,COMPUTE_DYNAM_AIJ_DIAGNOSTICS
 #endif
 
+#if defined( TRACERS_GC )
+      USE CHEM_DRV, only : TrDYNAM
+#endif
+      
 #if defined(TRACERS_ON) || defined(TRACERS_OCEAN)
       USE TRACER_COM, only: mtrace
 #endif
@@ -143,7 +147,7 @@ C**** Scale WM mixing ratios to conserve liquid water
       CALL QDYNAM  ! Advection of Q by integrated fluxes
          CALL TIMER (NOW,MDYN)
 
-#if defined(TRACERS_ON)
+#if defined(TRACERS_ON) || defined(TRACERS_GC)
       CALL TrDYNAM   ! tracer dynamics
 #endif
 

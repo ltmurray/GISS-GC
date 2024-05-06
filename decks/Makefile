@@ -123,6 +123,34 @@ endif
 
 
 gcm $(BIN_DIR)/$(RUN).exe: $(RUN).mk $(BIN_DIR) depend check_vars
+ifeq ($(GC),YES)
+	@echo "***************************************************************"
+	@echo "Compiling GEOS-Chem"
+	@echo "***************************************************************"
+	cd $(MODEL_DIR)/geos-chem/build && rm -rf * && cmake ../ -DINSTALLCOPY=.. && make -j install
+	#cd $(MODEL_DIR)/geos-chem/build && make install
+	cp $(MODEL_DIR)/geos-chem/build/mod/*.mod $(MODEL_DIR)/mod/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/mod/*.mod $(MODEL_DIR)/mod/
+	cp $(MODEL_DIR)/geos-chem/build/src/Cloud-J/mod/*.mod $(MODEL_DIR)/mod/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Core/libHCO.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Extensions/libHCOX.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Shared/Headers/libHeadersHco.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Shared/GeosUtil/libJulDayHco.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Shared/GeosUtil/libGeosUtilHco.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Shared/NcdfUtil/libNcdfUtilHco.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/HEMCO/src/Interfaces/Shared/libHCOI_Shared.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/ISORROPIA/libIsorropia.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/Headers/libHeaders.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/ObsPack/libObsPack.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/History/libHistory.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/KPP/fullchem/libKPP_FirstPass.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/KPP/fullchem/libKPP.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/GeosCore/libGeosCore.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/GeosUtil/libGeosUtil.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/GeosUtil/libJulDay.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/GEOS-Chem/NcdfUtil/libNcdfUtil.a $(MODEL_DIR)/geos-chem/lib/
+	cp $(MODEL_DIR)/geos-chem/build/src/Cloud-J/src/Core/libCloudJ_Core.a $(MODEL_DIR)/geos-chem/lib/
+endif
 	$(MAKE) -C $(MODEL_DIR) gcm RUN=$(RUN) DECKS_DIR=$(DECKS_DIR) $(OPTS_MAIN)
 	-mv $(MODEL_DIR)/$(RUN).bin $(BIN_DIR)/$(RUN).exe
 	@echo '----    Looks like compilation finished successfully     ----'
