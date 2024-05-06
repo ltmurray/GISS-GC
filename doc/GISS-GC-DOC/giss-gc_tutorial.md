@@ -44,6 +44,8 @@ To load the environment containing all the dependencies necessary to compile and
 conda activate giss
 ```
 
+If you would prefer to install the minimum dependencies yourself, you may see an example script for doing so at `$GSS_HOME/doc/GISS-GC-DOC/envs/install_dependencies.sh`.
+
 ### 1c. Install GISS Post-Processing Tools<a name="scaleacc"></a>
 
 The tools located in `$GISS_HOME/model/mk_diags` are necessary for post-processing the model output into a useful format, particularly the `scaleacc` program. I recommend copying that directory to a common location to which you can point your `$PATH` variable to the binaries.
