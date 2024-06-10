@@ -27,7 +27,7 @@ If you are new to Linux/UNIX systems, first read the following guides
 This tutorial will assume that the source code is located in the following directory: `$GISS_HOME`
 
 ```console
-git clone git@github.com:fetch4/GISS-GC.git $GISS_HOME
+git clone https://github.com/fetch4/GISS-GC.git $GISS_HOME
 ```
 
 ### 1b. Install Software Dependencies
