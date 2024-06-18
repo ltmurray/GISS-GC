@@ -129,8 +129,12 @@ ifeq ($(GC),YES)
 	@echo "***************************************************************"
 	@echo "Compiling GEOS-Chem"
 	@echo "***************************************************************"
-	cd $(GC_BUILD_DIR) && rm -rf * && cmake ../ -DINSTALLCOPY=.. && make -j install
-	#cd $(GC_BUILD_DIR) && make install
+	rm -rf $(GC_BUILD_DIR)
+	mkdir $(GC_BUILD_DIR)
+	mkdir -p $(GC_LIB_DIR)
+	cd $(GC_BUILD_DIR) && cmake ../ -DINSTALLCOPY=.. \
+		-DCMAKE_EXE_LINKER_FLAGS="-nostartfiles -nofor-main"
+	cd $(GC_BUILD_DIR) && make -j install
 	cp $(GC_BUILD_DIR)/mod/*.mod $(MODEL_DIR)/mod/
 	cp $(GC_BUILD_DIR)/src/HEMCO/mod/*.mod $(MODEL_DIR)/mod/
 	cp $(GC_BUILD_DIR)/src/Cloud-J/mod/*.mod $(MODEL_DIR)/mod/
